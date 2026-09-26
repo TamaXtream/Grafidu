@@ -1,0 +1,29 @@
+# Node
+node_modules/
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+
+# Env — real secrets go in .env.local (never committed)
+.env
+.env.local
+.env*.local
+
+# Python tooling (footer animation QA script)
+__pycache__/
+*.pyc
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local artifacts / tooling output
+*.log
+*.tsbuildinfo
+shots/
+.impeccable/
+ab_footer_results.json
