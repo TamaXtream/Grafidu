@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { login, signup } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/client";
 
 export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
@@ -15,7 +15,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
@@ -28,30 +28,42 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
       setError("Kata sandi minimal 8 karakter.");
       return;
     }
+    // Pendaftaran ditutup sementara — data ditambah manual di database oleh admin.
+    // Blok validasi signup lama sengaja dimatikan dulu, gampang dibuka lagi next.
     if (mode === "signup") {
-      if (!fullname.trim()) {
-        setError("Nama lengkap wajib diisi.");
-        return;
-      }
-      if (password !== confirm) {
-        setError("Konfirmasi kata sandi tidak cocok.");
-        return;
-      }
+      setError("Pendaftaran dilakukan oleh admin. Hubungi admin untuk dibuatkan akun.");
+      return;
     }
 
     try {
-      // Full page reloads reset the in-memory store, so navigation stays client-side.
-      if (mode === "login") {
-        const u = login(em, password);
-        if (u.role === "teacher") {
-          window.gtoast?.("Dashboard guru sedang dalam pengembangan — belum tersedia di versi ini.");
-          return;
-        }
-        router.push("/student/home");
-      } else {
-        signup(fullname.trim(), em, password);
-        router.push("/student/home");
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: em,
+        password: password,
+      });
+      if (error || !data.user) {
+        // Tampilkan pesan asli Supabase biar gampang debug (misal: Invalid login credentials / Email not confirmed)
+        console.error("[login]", error?.message);
+        setError(`Login gagal: ${error?.message ?? "Email atau kata sandi salah."}`);
+        return;
       }
+
+      const { data: profile, error: profErr } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", data.user.id)
+        .single();
+
+      if (profErr || !profile) {
+        console.error("[profile]", profErr?.message);
+        setError("Akun belum punya data di tabel profiles. Tambahkan manual dulu.");
+        return;
+      }
+
+      const role = (profile as { role: string }).role;
+      if (role === "teacher") router.push("/teacher/home");
+      else if (role === "admin") router.push("/admin");
+      else router.push("/student/home");
     } catch (err) {
       setError((err as Error).message);
     }
