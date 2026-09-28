@@ -3754,8 +3754,6 @@ tr.grade-row-open td {
   isolation: isolate;
   display: flex;
   flex-direction: column;
-  /* min-height: 100vh; */
-  /* min-height: 100svh; */
   overflow: hidden;
   overflow-wrap: break-word;
   background: var(--f-paper);
