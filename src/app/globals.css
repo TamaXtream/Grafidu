@@ -1,3 +1,4 @@
+@import "tailwindcss";
 /* ============================================================
    GRAFIDU — design system
    Palette extracted from Figma: Primary #751EF8 · Secondary #3B82F6
@@ -268,9 +269,17 @@ u,
 }
 
 /* hero */
+.hero-inner {
+  display: flex;
+  align-items: stretch;
+  gap: 64px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
 .hero {
   position: relative;
-  padding: 96px 0 120px;
+  padding-top: 96px;
   overflow: hidden;
 }
 .hero-copy {
@@ -323,13 +332,12 @@ u,
 
 /* hero mockup */
 .hero-visual {
-  position: absolute;
-  top: 116px;
-  right: 200px;
-  width: 790px;
-  height: 505px;
+  position: relative;
   z-index: 1;
   perspective: 2400px;
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
 }
 .mock-scene {
   position: absolute;
@@ -3593,8 +3601,8 @@ tr.grade-row-open td {
     position: relative;
     top: auto;
     right: auto;
-    width: min(620px, calc(100vw - 40px));
-    height: 430px;
+    width: 100%;
+    height: auto;
     margin: 44px auto 0;
     perspective: none;
     overflow: hidden;
