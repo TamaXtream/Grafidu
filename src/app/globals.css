@@ -325,7 +325,7 @@ u,
 .hero-visual {
   position: absolute;
   top: 116px;
-  right: 44px;
+  right: 200px;
   width: 790px;
   height: 505px;
   z-index: 1;
@@ -1273,7 +1273,8 @@ u,
 .auth-left {
   width: 51%;
   border-right: 1px solid #eeecef;
-  background: linear-gradient(180deg, #f7f5ff 0%, #fbfafe 46%, #fdfdff 100%);
+  background: url("/assets/LoginIll.png"), rgba(255, 255, 255, 0.3);
+  background-blend-mode: lighten;
   padding: 44px 56px 40px;
   position: relative;
   display: flex;
@@ -3754,8 +3755,6 @@ tr.grade-row-open td {
   isolation: isolate;
   display: flex;
   flex-direction: column;
-  /* min-height: 100vh; */
-  /* min-height: 100svh; */
   overflow: hidden;
   overflow-wrap: break-word;
   background: var(--f-paper);
@@ -4531,7 +4530,7 @@ body.sheet-open {
   font-weight: 600;
   transition: top 0.15s ease;
 }
-.skip-link:focus {
+.skip-link:focus-visible {
   top: 12px;
 }
 .to-top {

@@ -13,16 +13,29 @@ export default function AuthLeft() {
         <h1>
           Know where you are.
           <br />
-          Know <span className="accent">what to do<br />next.</span>
+          Know{" "}
+          <span className="accent">
+            what to do
+            <br />
+            next.
+          </span>
         </h1>
         <p>
-          Grades, materials, and AI recommendations in one place — so every login starts with something useful.
+          Grades, materials, and AI recommendations in one place — so every login starts with
+          something useful.
         </p>
       </div>
 
       <div className="auth-float-score">
         <span className="ic">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.4"
+          >
             <path d="M12 19V5M5 12l7-7 7 7" />
           </svg>
         </span>
