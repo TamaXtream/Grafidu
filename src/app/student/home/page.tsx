@@ -85,7 +85,7 @@ export default function StudentHomePage() {
 
         <h2 className="h2">Kelas</h2>
         <StudentClassSearch classes={classes} />
-      </DashboardShell>j
+      </DashboardShell>
     </>
   );
 }
