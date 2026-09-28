@@ -1273,7 +1273,8 @@ u,
 .auth-left {
   width: 51%;
   border-right: 1px solid #eeecef;
-  background: linear-gradient(180deg, #f7f5ff 0%, #fbfafe 46%, #fdfdff 100%);
+  background: url("/assets/LoginIll.png"), rgba(255, 255, 255, 0.3);
+  background-blend-mode: lighten;
   padding: 44px 56px 40px;
   position: relative;
   display: flex;
