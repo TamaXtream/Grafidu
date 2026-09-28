@@ -325,7 +325,7 @@ u,
 .hero-visual {
   position: absolute;
   top: 116px;
-  right: 44px;
+  right: 200px;
   width: 790px;
   height: 505px;
   z-index: 1;
@@ -4529,7 +4529,7 @@ body.sheet-open {
   font-weight: 600;
   transition: top 0.15s ease;
 }
-.skip-link:focus {
+.skip-link:focus-visible {
   top: 12px;
 }
 .to-top {
