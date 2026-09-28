@@ -12,7 +12,7 @@ export default function LoginPage() {
       <div className="auth">
         <AuthLeft />
         <main className="auth-right">
-          <AuthForm mode="login" />
+          <AuthForm />
         </main>
       </div>
     </ToastProvider>
