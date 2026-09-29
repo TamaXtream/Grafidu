@@ -1,8 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Inter_Tight } from "next/font/google";
+import { Inter, Inter_Tight, Manrope } from "next/font/google";
 import "./globals.css";
 import BodySync from "@/components/body-sync";
 import ToastProvider from "@/components/ui/toast-provider";
+import { cn } from "@/lib/utils";
+
+const manrope = Manrope({ subsets: ["latin"], variable: "--font-sans" });
 
 const inter = Inter({
   subsets: ["latin"],
@@ -30,11 +33,14 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${interTight.variable}`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={cn(inter.variable, interTight.variable, "font-sans", manrope.variable)}
+      data-scroll-behavior="smooth"
+    >
       <body suppressHydrationWarning>
-        <ToastProvider>
-          {children}
-        </ToastProvider>
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );

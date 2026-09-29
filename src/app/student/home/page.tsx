@@ -21,10 +21,8 @@ export default function StudentHomePage() {
   const sidebarData = getStudentSidebarData(db, u);
   const rightbarData = getStudentRightbarData(db, u);
 
-  const subs = studentSubjects(db, u.id);
-  const avg = subs.length
-    ? Math.round(subs.reduce((acc, s) => acc + s.score, 0) / subs.length)
-    : 0;
+  const subs = studentSubjects(db, Number(u.id));
+  const avg = subs.length ? Math.round(subs.reduce((acc, s) => acc + s.score, 0) / subs.length) : 0;
 
   const tasks = sidebarData.tasksToday;
   const done = tasks.filter((t) => t.done).length;
