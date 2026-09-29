@@ -1536,6 +1536,11 @@ u,
 .btn-auth:hover {
   background: #4c25c9;
 }
+.btn-auth:disabled,
+.btn-auth.is-loading {
+  opacity: 0.7;
+  cursor: wait;
+}
 .auth-or {
   display: flex;
   align-items: center;

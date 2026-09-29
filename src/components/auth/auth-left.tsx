@@ -26,7 +26,9 @@ export default function AuthLeft() {
         </p>
       </div>
 
-      <div className="auth-float-score">
+      {/* Panel ilustratif generik — bukan data user/demo dari database.
+          Data asli hanya tampil setelah login, diambil dari Supabase. */}
+      <div className="auth-float-score" aria-hidden="true">
         <span className="ic">
           <svg
             width="14"
@@ -40,27 +42,27 @@ export default function AuthLeft() {
           </svg>
         </span>
         <span>
-          <span>Average score</span>
-          <b>87 / 100</b>
+          <span>Nilai & tugas terpantau</span>
+          <b>Real-time dari database</b>
         </span>
       </div>
 
-      <div className="auth-float-grades">
+      <div className="auth-float-grades" aria-hidden="true">
         <div className="head">
-          <b>Jessie Cooper</b>
-          <span>XI RPL B</span>
+          <b>Ringkasan Belajar</b>
+          <span>Grafidu</span>
         </div>
         <div className="afg-row">
-          <span>Informatika</span>
-          <span className="pill pill-green">95</span>
+          <span>Tugas & kuis</span>
+          <span className="pill pill-green">Terjadwal</span>
         </div>
         <div className="afg-row">
-          <span>Seni Budaya</span>
-          <span className="pill pill-red">65</span>
+          <span>Materi kelas</span>
+          <span className="pill pill-green">Terpusat</span>
         </div>
         <div className="afg-row">
-          <span>Fisika</span>
-          <span className="pill pill-red">72</span>
+          <span>Rekomendasi AI</span>
+          <span className="pill pill-green">Personal</span>
         </div>
       </div>
 

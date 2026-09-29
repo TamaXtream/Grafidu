@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getDB, update, useDB, type Role, type User } from "@/lib/store";
+import { createClient } from "@/lib/supabase/client";
+
+export type Role = "student" | "teacher" | "admin";
 
 export type SessionUser = {
-  id: number;
+  id: string;
   role: Role;
   name: string;
   email: string;
@@ -16,113 +18,164 @@ export type SessionUser = {
   prefs: string;
 };
 
-function sessionUser(u: User): SessionUser {
-  return {
-    id: u.id,
-    role: u.role,
-    name: u.name,
-    email: u.email,
-    className: u.className,
-    subject: u.subject,
-    avatar: u.avatar,
-    phone: u.phone,
-    prefs: u.prefs,
-  };
-}
+type ProfileRow = {
+  role: Role | string | null;
+  full_name: string | null;
+  class_name: string | null;
+  subject: string | null;
+  avatar_url: string | null;
+  phone: string | null;
+};
 
-/** Current user from the in-memory session; null when logged out. */
-export function getCurrentUser(): SessionUser | null {
-  const db = getDB();
-  if (!db.sessionUserId) return null;
-  const u = db.users.find((x) => x.id === db.sessionUserId);
-  return u ? sessionUser(u) : null;
-}
+/**
+ * Ambil baris profil. Coba kolom lengkap dulu; kalau skema tabel belum
+ * punya semua kolom (PostgREST 400), mundur ke `role` saja agar login
+ * tetap jalan. Return null kalau baris memang tidak ada / tak bisa dibaca.
+ */
+async function fetchProfile(
+  supabase: ReturnType<typeof createClient>,
+  userId: string
+): Promise<ProfileRow | null> {
+  const full = await supabase
+    .from("profiles")
+    .select("role, full_name, class_name, subject, avatar_url, phone")
+    .eq("id", userId)
+    .single();
+  if (!full.error) return (full.data as ProfileRow | null) ?? null;
 
-export function login(email: string, password: string): SessionUser {
-  const db = getDB();
-  const u = db.users.find((x) => x.email.toLowerCase() === email.trim().toLowerCase());
-  if (!u || u.password !== password) {
-    throw new Error("Email atau kata sandi salah.");
+  const minimal = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .single();
+  if (!minimal.error) return (minimal.data as ProfileRow | null) ?? null;
+
+  if (process.env.NODE_ENV === "development") {
+    console.warn("[auth:profile]", full.error?.code, full.error?.message);
   }
-  update((d) => {
-    d.sessionUserId = u.id;
-  });
-  return sessionUser(u);
-}
-
-const DEFAULT_PREFS = '{"task":true,"deadline":true,"ai":false,"email":false}';
-
-export function signup(name: string, email: string, password: string): SessionUser {
-  const db = getDB();
-  const cleanName = name.trim();
-  const cleanEmail = email.trim().toLowerCase();
-  if (!cleanName || !cleanEmail || !password) {
-    throw new Error("Semua kolom wajib diisi.");
-  }
-  if (password.length < 8) {
-    throw new Error("Kata sandi minimal 8 karakter.");
-  }
-  if (db.users.some((x) => x.email.toLowerCase() === cleanEmail)) {
-    throw new Error("Email sudah terdaftar. Coba masuk saja.");
-  }
-
-  const klass = db.classes.find((c) => c.name === "XI RPL B");
-  let created: User | null = null;
-  update((d) => {
-    const id = d.nextId++;
-    const u: User = {
-      id,
-      role: "student",
-      name: cleanName,
-      email: cleanEmail,
-      password,
-      className: "XI RPL B",
-      subject: null,
-      avatar: "/assets/logo.png",
-      phone: "",
-      prefs: DEFAULT_PREFS,
-    };
-    d.users.push(u);
-    if (klass) d.enrollments.push({ classId: klass.id, studentId: id });
-    d.chatMessages.push({
-      id: d.nextId++,
-      userId: id,
-      role: "ai",
-      text: `Hai ${cleanName.split(" ")[0]}! 👋 Aku AI Agent Grafidu. Mau mulai dari mana?`,
-      createdAt: new Date().toISOString(),
-    });
-    d.sessionUserId = id;
-    created = u;
-  });
-  return sessionUser(created!);
-}
-
-export function logout(): void {
-  update((d) => {
-    d.sessionUserId = null;
-  });
+  return null;
 }
 
 /**
- * Client-side route guard: returns null on the server and while logged out,
- * then redirects to /login or the caller's role home.
+ * Satu-satunya sumber data user: Supabase Auth + tabel `profiles`.
+ * Tidak ada localStorage / data demo di alur login.
  */
+async function fetchSessionUser(): Promise<SessionUser | null> {
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const authUser = session?.user;
+  if (!authUser) return null;
+
+  const p = await fetchProfile(supabase, authUser.id);
+  if (!p) return null;
+  const role = (p?.role as Role) || "student";
+  return {
+    id: authUser.id,
+    role,
+    name: p?.full_name || authUser.email || "User",
+    email: authUser.email || "",
+    className: p?.class_name ?? null,
+    subject: p?.subject ?? null,
+    avatar: p?.avatar_url || "/assets/logo.png",
+    phone: p?.phone || "",
+    prefs: "{}",
+  };
+}
+
+// Cache sinkron agar komponen lama yang memanggil getCurrentUser()
+// tetap jalan; isi cache selalu berasal dari Supabase via useRequireUser()
+// atau getSessionUser(), bukan dari data demo.
+let cachedUser: SessionUser | null = null;
+
+/** Versi sinkron: baca cache terakhir dari Supabase. */
+export function getCurrentUser(): SessionUser | null {
+  return cachedUser;
+}
+
+/** Versi async: ambil sesi + profil fresh dari Supabase. */
+export async function getSessionUser(): Promise<SessionUser | null> {
+  const u = await fetchSessionUser();
+  cachedUser = u;
+  return u;
+}
+
+export function login(): never {
+  throw new Error("Gunakan Supabase Auth langsung via auth-form.tsx");
+}
+
+export function signup(): never {
+  throw new Error("Gunakan Supabase Auth langsung");
+}
+
+export async function logout(): Promise<void> {
+  if (typeof window === "undefined") return;
+  cachedUser = null;
+  const supabase = createClient();
+  await supabase.auth.signOut();
+}
+
 export function useRequireUser(role?: Role): SessionUser | null {
   const router = useRouter();
-  const db = useDB();
+  const [user, setUser] = useState<SessionUser | null>(cachedUser);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const u = getCurrentUser();
-    if (!u) {
-      router.replace("/login");
-    } else if (role && u.role !== role) {
-      router.replace(u.role === "teacher" ? "/teacher/home" : "/student/home");
-    }
-  }, [db, role, router]);
+    const supabase = createClient();
+    let cancelled = false;
 
-  if (!db || !db.sessionUserId) return null;
-  const u = db.users.find((x) => x.id === db.sessionUserId);
-  if (!u) return null;
-  if (role && u.role !== role) return null;
-  return sessionUser(u);
+    const applyUser = (u: SessionUser | null) => {
+      if (cancelled) return;
+      cachedUser = u;
+      if (!u) {
+        setUser(null);
+        setLoading(false);
+        router.replace("/login");
+        return;
+      }
+      if (role && u.role !== role) {
+        const target =
+          u.role === "teacher"
+            ? "/teacher/home"
+            : u.role === "admin"
+              ? "/admin"
+              : "/student/home";
+        setUser(null);
+        setLoading(false);
+        router.replace(target);
+        return;
+      }
+      setUser(u);
+      setLoading(false);
+    };
+
+    fetchSessionUser()
+      .then(applyUser)
+      .catch(() => applyUser(null));
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (cancelled) return;
+      if (!session?.user) {
+        applyUser(null);
+        return;
+      }
+      try {
+        const u = await fetchSessionUser();
+        applyUser(u);
+      } catch {
+        applyUser(null);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, [router, role]);
+
+  if (loading) return null;
+  return user;
 }

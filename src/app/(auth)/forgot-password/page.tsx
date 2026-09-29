@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import AuthLeft from "@/components/auth/auth-left";
+import { createClient } from "@/lib/supabase/client";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -12,19 +13,31 @@ export default function ForgotPasswordPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
     setError(null);
-    const em = email.trim();
+    const em = email.trim().toLowerCase();
     if (!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
       setError("Format email tidak valid.");
       return;
     }
     setLoading(true);
-    // Simulate recovery flow
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      // Murni via Supabase Auth — tidak ada simulasi lokal/demo.
+      const supabase = createClient();
+      const { error } = await supabase.auth.resetPasswordForEmail(em, {
+        redirectTo: `${window.location.origin}/login`,
+      });
+      if (error) {
+        setError(`Gagal mengirim tautan: ${error.message}`);
+        return;
+      }
       setSubmitted(true);
       window.gtoast?.("Tautan pemulihan kata sandi telah dikirim ke email kamu.");
-    }, 800);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -81,7 +94,9 @@ export default function ForgotPasswordPage() {
                   <input
                     id="reset-email"
                     type="email"
-                    placeholder="contoh: jessie.cooper@grafidu.sch.id"
+                    placeholder="nama@sekolah.sch.id"
+                    autoComplete="email"
+                    name="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required

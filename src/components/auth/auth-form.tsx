@@ -9,15 +9,22 @@ export default function AuthForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
+  const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
     setError(null);
 
-    const em = email.trim();
+    const em = email.trim().toLowerCase();
     if (!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
       setError("Format email tidak valid.");
+      return;
+    }
+    if (!password) {
+      setError("Kata sandi wajib diisi.");
       return;
     }
     if (password.length < 8) {
@@ -25,6 +32,7 @@ export default function AuthForm() {
       return;
     }
 
+    setLoading(true);
     try {
       const supabase = createClient();
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -32,11 +40,13 @@ export default function AuthForm() {
         password: password,
       });
       if (error || !data.user) {
-        console.error("[login]", error?.message);
         setError(`Login gagal: ${error?.message ?? "Email atau kata sandi salah."}`);
         return;
       }
 
+      // Sumber kebenaran tunggal: tabel `profiles` di Supabase.
+      // Login hanya butuh `role`; kolom lain opsional agar tidak 400
+      // kalau skema tabel belum lengkap.
       const { data: profile, error: profErr } = await supabase
         .from("profiles")
         .select("role")
@@ -44,17 +54,30 @@ export default function AuthForm() {
         .single();
 
       if (profErr || !profile) {
-        console.error("[profile]", profErr?.message);
-        setError("Akun belum punya data di tabel profiles. Tambahkan manual dulu.");
+        await supabase.auth.signOut();
+        if (process.env.NODE_ENV === "development") {
+          console.warn("[login:profile]", profErr?.code, profErr?.message);
+        }
+        // PGRST116 = baris tidak ada (user belum didaftarkan).
+        // Kode lain (mis. 400 / RLS) = masalah skema atau policy.
+        setError(
+          profErr?.code === "PGRST116"
+            ? "Akun ini belum terdaftar di database (tabel profiles). Hubungi admin sekolah untuk didaftarkan."
+            : `Gagal membaca data profil: ${profErr?.message ?? "unknown error"}. Periksa kolom tabel profiles dan RLS policy.`
+        );
         return;
       }
 
       const role = (profile as { role: string }).role;
+      // Satu refresh setelah navigasi agar cookie sesi terbaca middleware.
       if (role === "teacher") router.push("/teacher/home");
       else if (role === "admin") router.push("/admin");
       else router.push("/student/home");
+      router.refresh();
     } catch (err) {
       setError((err as Error).message);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -66,23 +89,28 @@ export default function AuthForm() {
       {error ? (
         <div
           className="field-error"
+          role="alert"
           style={{ color: "var(--red)", marginBottom: 12, fontSize: 13 }}
         >
           {error}
         </div>
       ) : null}
 
-      <form id="go-student" onSubmit={handleSubmit} noValidate>
+      {/* Enter di kolom mana pun memicu submit via form onSubmit di bawah. */}
+      <form id="login-form" onSubmit={handleSubmit} noValidate>
         <div className="field">
           <label htmlFor="email">Email</label>
           <div className="control">
             <input
               id="email"
+              name="email"
               type="email"
-              placeholder="jessie@school.edu"
+              autoComplete="email"
+              placeholder="nama@sekolah.sch.id"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
             />
           </div>
         </div>
@@ -92,13 +120,17 @@ export default function AuthForm() {
           <div className="control">
             <input
               id="password"
+              name="password"
               type={showPw ? "text" : "password"}
+              autoComplete={remember ? "current-password" : "off"}
               placeholder="Enter your password"
               required
+              minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
             />
-            <button type="button" className="show-pw" onClick={() => setShowPw((s) => !s)}>
+            <button type="button" className="show-pw" onClick={() => setShowPw((s) => !s)} tabIndex={-1}>
               {showPw ? "Hide" : "Show"}
             </button>
           </div>
@@ -106,7 +138,11 @@ export default function AuthForm() {
 
         <div className="auth-row">
           <label className="checkbox">
-            <input type="checkbox" />
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+            />
             <span className="box">
               <svg
                 width="10"
@@ -124,8 +160,8 @@ export default function AuthForm() {
           <span className="spacer"></span>
           <a href="/forgot-password">Forgot password?</a>
         </div>
-        <button className="btn-auth" type="submit">
-          Sign in
+        <button className="btn-auth" type="submit" disabled={loading} aria-busy={loading}>
+          {loading ? "Memproses..." : "Sign in"}
         </button>
       </form>
     </div>
